@@ -1,2 +1,8 @@
 generated_rsp_files/
 Raw_Data/
+.mypy_cache
+Myfuncs/__pycache__/
+generated_rsp_GBMpl/
+# GBMFIT_Generated_Final/
+GBMFIT_Generated_Final/
+GBMFIT_Origin_Final/
