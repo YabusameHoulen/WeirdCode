@@ -65,7 +65,7 @@ class FitResult:
         return "\n".join(res)
 
     @staticmethod  ### 相关的类函数
-    def parse_fit_results(file_path):
+    def parse_fit_results(grb_name, grb_time, file_path):
         with open(file_path, "r") as file:
             lines = file.readlines()
 
@@ -80,18 +80,22 @@ class FitResult:
             if line.endswith("FitResult("):
                 if current_model:
                     data.append(current_model)
-                current_model = {"Model": line.split(" ")[0]}
+                current_model = current_model = {
+                    "Name": grb_name,
+                    "Time": grb_time,
+                    "Model": line.split(" ")[0],
+                }
             elif line.startswith("fit success:"):
                 current_model["Fit Success"] = line.split(": ")[1]
             elif line.startswith("message:"):
                 current_model["Reason"] = line.split(": ")[1]
-            elif line[0].isalpha():
-                key, values = line.split(maxsplit=1)
-                current_model[key] = values
             elif line.startswith("Pgstat:"):
                 current_model["Pgstat"] = float(line.split(": ")[1])
             elif line.startswith("dof:"):
                 current_model["DOF"] = int(line.split(": ")[1])
+            elif line[0].isalpha():
+                key, values = line.split(maxsplit=1)
+                current_model[key] = values
 
         if current_model:
             data.append(current_model)
@@ -270,7 +274,9 @@ for grb_name, grb_file, grb_time, grb_bkg in zip(
                 f.write("\n\n")
 
             data = FitResult.parse_fit_results(
-                f"{SAVEPATH}/{grb_name}/{src_range}_fit.txt"
+                grb_name=grb_name,
+                grb_time=src_range,
+                file_path=f"{SAVEPATH}/{grb_name}/{src_range}_fit.txt",
             )
             data_df = pd.DataFrame(data)
             data_df.to_csv(f"{SAVEPATH}/{grb_name}/{src_range}_fit.csv", index=False)
@@ -319,3 +325,39 @@ for grb_name, grb_file, grb_time, grb_bkg in zip(
             # except:
             #     print(f"{grb_name}------{src_range}-------ploterror")
             #     continue
+
+# %%
+results_csv = "GBM_all_origin.csv"
+total_results_list: list = []
+COLS = [
+    "Name",
+    "Time",
+    "Model",
+    "Fit Success",
+    "Reason",
+    "Pgstat",
+    "dof",
+    "A",
+    "Ep",
+    "alpha",
+    "Beta",
+    "Ab",
+    "kT",
+    "Ec",
+]
+EMPTY_DFROW = pd.DataFrame([{col: None for col in COLS}])
+for grb_name, grb_times in zip(normal_bursts.name, normal_bursts.grb_chosen_times):
+    for grb_time in eval(grb_times):
+        time_select_region = decode_3ml_timestr(grb_time)
+        total_results_list.append(EMPTY_DFROW)
+        burst_result = pd.read_csv(
+            f"{SAVEPATH}/{grb_name}/{time_select_region}_fit.csv"
+        )
+        total_results_list.append(burst_result)
+        # break ### test first burst
+
+total_results_df = pd.concat(total_results_list)
+total_results_df.to_csv(results_csv)
+print(f"----{results_csv:^10}----")
+
+# %%
